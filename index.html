@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endless Memory Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a2e;
+            color: white;
+            margin: 0; padding: 20px;
+        }
+        .header { text-align: center; margin-bottom: 20px; }
+        #levelDisplay { color: #e94560; font-size: 2rem; font-weight: bold; }
+        
+        .grid-container {
+            display: grid;
+            grid-gap: 10px;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: 65px; height: 65px;
+            background-color: #16213e;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.8rem; cursor: pointer; border-radius: 8px;
+            color: transparent; border: 2px solid #0f3460;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+
+        .card.flipped { background-color: #e94560; color: white; transform: rotateY(180deg); }
+        .card.matched { background-color: #00d2ad; color: white; cursor: default; visibility: hidden; opacity: 0; transition: 0.5s; }
+
+        .controls { margin-top: 20px; }
+        button {
+            padding: 10px 25px; font-size: 1rem; cursor: pointer;
+            background: #e94560; color: white; border: none; border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Endless Memory</h1>
+        <div>Level: <span id="levelDisplay">1</span></div>
+    </div>
+
+    <div id="gameBoard" class="grid-container"></div>
+
+    <div class="controls">
+        <button onclick="restartGame()">Reset to Level 1</button>
+    </div>
+
+    <script>
+        let level = 1;
+        let matchedPairs = 0;
+        let firstCard = null, secondCard = null, lockBoard = false;
+
+        const emojis = ['🔥','💎','👑','👻','🤖','👽','🐱','🐶','🦊','🐸','🍀','🍕','🎸','🚀','🌈','⚡','❄️','☀️','🏀','👾'];
+
+        function initLevel() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            matchedPairs = 0;
+            document.getElementById('levelDisplay').textContent = level;
+
+            // Determine board size based on level
+            // Maxes out at 6x6 to fit on screen
+            let size = level < 3 ? 4 : (level < 6 ? 5 : 6);
+            if (size % 2 !== 0 && level < 6) size = 4; // Keep it even for pairs
+
+            let totalCards = 16; // Level 1 & 2
+            if (level >= 3) totalCards = 20; // Level 3+
+            if (level >= 6) totalCards = 24; // Level 6+
+            if (level >= 10) totalCards = 30; // Level 10+
+            
+            board.style.gridTemplateColumns = `repeat(4, 65px)`;
+            if(totalCards > 16) board.style.gridTemplateColumns = `repeat(5, 65px)`;
+            if(totalCards > 25) board.style.gridTemplateColumns = `repeat(6, 65px)`;
+
+            // Select random emojis for this level
+            let selected = emojis.sort(() => 0.5 - Math.random()).slice(0, totalCards / 2);
+            let gameSet = [...selected, ...selected].sort(() => 0.5 - Math.random());
+
+            gameSet.forEach(emoji => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.emoji = emoji;
+                card.textContent = emoji;
+                card.onclick = () => flipCard(card, totalCards / 2);
+                board.appendChild(card);
+            });
+        }
+
+        function flipCard(card, goal) {
+            if (lockBoard || card === firstCard || card.classList.contains('matched')) return;
+            card.classList.add('flipped');
+
+            if (!firstCard) {
+                firstCard = card;
+                return;
+            }
+
+            secondCard = card;
+            lockBoard = true;
+
+            if (firstCard.dataset.emoji === secondCard.dataset.emoji) {
+                setTimeout(() => {
+                    firstCard.classList.add('matched');
+                    secondCard.classList.add('matched');
+                    matchedPairs++;
+                    resetTurn();
+                    if (matchedPairs === goal) {
+                        level++;
+                        setTimeout(initLevel, 1000);
+                    }
+                }, 400);
+            } else {
+                setTimeout(() => {
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    resetTurn();
+                }, 700);
+            }
+        }
+
+        function resetTurn() { [firstCard, secondCard, lockBoard] = [null, null, false]; }
+
+        function restartGame() {
+            level = 1;
+            initLevel();
+        }
+
+        initLevel();
+    </script>
+</body>
+</html>
